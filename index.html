@@ -135,7 +135,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:var(--gray);letter-spacing:1px;">v1.0.2</div>
+    <div style="font-size:0.6rem;color:var(--gray);letter-spacing:1px;">v1.0.4</div>
   </div>
 </header>
 
@@ -481,6 +481,19 @@ function buildMaskDataURL(){
   return mc.toDataURL('image/png');
 }
 
+async function uploadToReplicate(dataURL){
+  const base64=dataURL.split(',')[1];
+  const type=dataURL.indexOf('image/jpeg')>-1?'image/jpeg':'image/png';
+  const res=await fetch(API_BASE+'?action=upload',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({data:base64,type}),
+  });
+  if(!res.ok) throw new Error('Upload failed: '+res.status);
+  const result=await res.json();
+  return result.urls?.get||result.url;
+}
+
 async function runAISimulation(){
   if(!state.originalDataURL){toast('Upload a photo first.');return;}
   if(!state.drawPoints.length){toast('Trace the bank line first.');return;}
@@ -492,25 +505,27 @@ async function runAISimulation(){
   const prompt=`Professional landscape photo of a beautifully restored lake shoreline. ${veg} growing right to the water's edge on a smooth graded ${slope} slope. A Shore Sox erosion control tube visible at the waterline — a tan cylindrical fabric sock filled with soil stabilizing the bank. Crystal clear lake water. Lush healthy vegetation. Sunny day. Photorealistic, high resolution, 4k.`;
   const negPrompt='erosion, bare soil, dirt exposed, muddy bank, degraded, brown earth, debris, ugly, blurry, cartoon, painting, illustration, render, cgi';
   try {
-    showSpinner(true,'Sending to Replicate AI...');
     const maskDataURL=buildMaskDataURL();
-    const imageB64=state.originalDataURL.split(',')[1];
-    const maskB64=maskDataURL.split(',')[1];
+    showSpinner(true,'Uploading photo to AI...');
+    const imageUrl=await uploadToReplicate(state.originalDataURL);
+    showSpinner(true,'Uploading mask...');
+    const maskUrl=await uploadToReplicate(maskDataURL);
+    showSpinner(true,'Generating simulation...');
     const body={
       version:MODEL_VERSION,
       input:{
         prompt,negative_prompt:negPrompt,
-        image:'data:image/png;base64,'+imageB64,
-        mask:'data:image/png;base64,'+maskB64,
+        image:imageUrl,
+        mask:maskUrl,
         num_inference_steps:30,
         guidance_scale:8,
         strength:0.9,
       }
     };
-    const res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+    const res=await fetch(API_BASE,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
     });
     if(!res.ok){const err=await res.json();throw new Error(err.detail||'Replicate error: '+res.status);}
     const prediction=await res.json();
