@@ -1,1 +1,7 @@
-{}
+{
+  "functions": {
+    "api/replicate.js": {
+      "runtime": "nodejs24.x"
+    }
+  }
+}
