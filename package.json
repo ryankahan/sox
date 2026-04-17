@@ -1,8 +1,1 @@
-{
-  "name": "shoresox-estimator",
-  "version": "1.0.0",
-  "description": "SOX Erosion Solutions — Bank Estimator & AI Simulation",
-  "engines": {
-    "node": "18.x"
-  }
-}
+{"name":"shoresox-estimator","version":"1.0.0","engines":{"node":"24.x"}}
