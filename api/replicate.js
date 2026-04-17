@@ -1,4 +1,4 @@
-module.exports = async function handler(req, res) {
+const handler = async function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -38,10 +38,12 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports.config = {
+handler.config = {
   api: {
     bodyParser: {
       sizeLimit: '10mb',
     },
   },
 };
+
+module.exports = handler;
