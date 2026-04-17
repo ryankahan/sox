@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shore Sox — Bank Estimator</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-dark:#0a1628; --blue-mid:#0d2a4a; --blue-accent:#1565c0;
+    --green:#4caf50; --green-bright:#76c442; --white:#f0f4f8;
+    --gray:#8fa3b8; --panel:rgba(13,42,74,0.92); --border:rgba(21,101,192,0.4);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--blue-dark);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  header{background:linear-gradient(135deg,#061020 0%,var(--blue-mid) 100%);border-bottom:2px solid var(--green-bright);padding:10px 28px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+  header::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(76,175,80,0.12) 0%,transparent 70%);pointer-events:none;}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  .header-badge{background:var(--green-bright);color:#061020;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;padding:4px 12px;border-radius:2px;}
+  .powered-by{font-size:0.63rem;color:var(--gray);letter-spacing:1px;}
+
+  .app{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 64px);}
+
+  .sidebar{background:var(--panel);border-right:1px solid var(--border);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+  .section-label{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.61rem;letter-spacing:3px;text-transform:uppercase;color:var(--green-bright);margin-bottom:5px;}
+  .card{background:rgba(6,16,32,0.6);border:1px solid var(--border);border-radius:6px;padding:13px;}
+  .upload-zone{border:2px dashed var(--border);border-radius:6px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--green-bright);background:rgba(76,196,66,0.06);}
+  .upload-zone p{font-size:0.8rem;color:var(--gray);line-height:1.4;}
+  .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .form-group{margin-bottom:9px;}
+  label{display:block;font-size:0.72rem;color:var(--gray);margin-bottom:3px;}
+  input[type=number],select{width:100%;background:rgba(6,16,32,0.8);border:1px solid var(--border);border-radius:4px;color:var(--white);padding:6px 10px;font-family:'Barlow',sans-serif;font-size:0.86rem;outline:none;transition:border-color 0.2s;}
+  input[type=number]:focus,select:focus{border-color:var(--green-bright);}
+  select option{background:var(--blue-dark);}
+  .tool-row{display:flex;gap:6px;flex-wrap:wrap;}
+  .tool-btn{flex:1;background:rgba(6,16,32,0.7);border:1px solid var(--border);border-radius:4px;color:var(--white);padding:6px 7px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:0.76rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;text-align:center;}
+  .tool-btn:hover{border-color:var(--green-bright);color:var(--green-bright);}
+  .tool-btn.active{background:var(--green-bright);border-color:var(--green-bright);color:#061020;}
+  .btn-primary{width:100%;background:linear-gradient(135deg,var(--green) 0%,var(--green-bright) 100%);border:none;border-radius:4px;color:#061020;padding:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+  .btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);}
+  .btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+  .btn-secondary{width:100%;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--gray);padding:7px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;margin-top:6px;}
+  .btn-secondary:hover{border-color:var(--gray);color:var(--white);}
+  .btn-ai{width:100%;background:linear-gradient(135deg,#1a237e,#1565c0);border:1px solid #42a5f5;border-radius:4px;color:var(--white);padding:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-top:7px;}
+  .btn-ai:hover{filter:brightness(1.15);transform:translateY(-1px);}
+  .btn-ai:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+  .estimate-panel{background:rgba(6,16,32,0.8);border:1px solid var(--green-bright);border-radius:6px;padding:13px;}
+  .stat-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(21,101,192,0.2);}
+  .stat-row:last-child{border-bottom:none;}
+  .stat-label{font-size:0.77rem;color:var(--gray);}
+  .stat-value{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.1rem;color:var(--green-bright);}
+  .stat-unit{font-size:0.66rem;color:var(--gray);margin-left:2px;}
+  .steps{display:flex;gap:4px;align-items:center;}
+  .step{display:flex;align-items:center;gap:4px;font-size:0.68rem;color:var(--gray);}
+  .step-num{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.66rem;flex-shrink:0;}
+  .step.active .step-num{background:var(--green-bright);border-color:var(--green-bright);color:#061020;}
+  .step.done .step-num{background:var(--blue-accent);border-color:var(--blue-accent);color:var(--white);}
+  .step-arrow{color:var(--border);font-size:0.58rem;}
+  .info-box{background:rgba(21,101,192,0.1);border-left:3px solid var(--blue-accent);border-radius:0 4px 4px 0;padding:7px 9px;font-size:0.74rem;color:var(--gray);line-height:1.5;margin-bottom:7px;}
+  .print-btn{background:rgba(21,101,192,0.2);border:1px solid var(--blue-accent);border-radius:4px;color:var(--white);padding:7px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;width:100%;margin-top:6px;}
+  .print-btn:hover{background:rgba(21,101,192,0.4);}
+
+  .main{display:flex;flex-direction:column;background:#070f1e;position:relative;overflow:hidden;}
+  .canvas-toolbar{background:rgba(13,42,74,0.9);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .toolbar-label{font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;text-transform:uppercase;color:var(--gray);}
+  .mode-pills{display:flex;gap:5px;}
+  .mode-pill{background:rgba(6,16,32,0.7);border:1px solid var(--border);border-radius:20px;color:var(--gray);padding:3px 12px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:0.71rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
+  .mode-pill:hover{border-color:var(--green-bright);color:var(--white);}
+  .mode-pill.active{background:var(--green-bright);border-color:var(--green-bright);color:#061020;}
+  .canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+  #mainCanvas{position:absolute;cursor:crosshair;display:block;}
+
+  .ai-result-wrap{position:absolute;inset:0;background:#070f1e;display:none;flex-direction:column;align-items:stretch;justify-content:stretch;z-index:10;}
+  .ai-result-wrap.visible{display:flex;}
+  .before-after{display:flex;width:100%;height:100%;}
+  .ba-panel{flex:1;position:relative;overflow:hidden;}
+  .ba-img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ba-label{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(6,16,32,0.88);border:1px solid var(--border);border-radius:3px;padding:4px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;color:var(--white);white-space:nowrap;}
+  .ba-label.after{border-color:var(--green-bright);color:var(--green-bright);}
+  .divider-bar{width:4px;background:var(--green-bright);flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;}
+  .divider-bar span{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.6rem;letter-spacing:2px;color:#061020;background:var(--green-bright);padding:8px 2px;white-space:nowrap;}
+
+  .spinner-wrap{display:none;flex-direction:column;align-items:center;gap:16px;position:absolute;inset:0;justify-content:center;z-index:20;background:rgba(7,15,30,0.93);}
+  .spinner-wrap.visible{display:flex;}
+  .spinner{width:50px;height:50px;border-radius:50%;border:3px solid rgba(118,196,66,0.2);border-top-color:var(--green-bright);animation:spin 0.85s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .spinner-text{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:0.95rem;letter-spacing:2px;color:var(--gray);text-transform:uppercase;}
+  .spinner-sub{font-size:0.72rem;color:rgba(143,163,184,0.5);letter-spacing:1px;}
+
+  .placeholder{text-align:center;pointer-events:none;z-index:1;}
+  .placeholder-icon{font-size:3rem;opacity:0.2;display:block;margin-bottom:12px;}
+  .placeholder h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.25rem;letter-spacing:2px;color:var(--gray);margin-bottom:4px;}
+  .placeholder p{font-size:0.8rem;color:rgba(143,163,184,0.5);}
+
+  .status-bar{background:rgba(6,16,32,0.9);border-top:1px solid var(--border);padding:5px 16px;display:flex;align-items:center;gap:16px;flex-shrink:0;}
+  .status-item{display:flex;align-items:center;gap:5px;font-size:0.68rem;color:var(--gray);}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--border);}
+  .status-dot.active{background:var(--green-bright);}
+
+  .toast{position:fixed;bottom:26px;right:26px;background:var(--blue-mid);border:1px solid var(--green-bright);border-radius:6px;padding:10px 15px;font-size:0.81rem;color:var(--white);z-index:1000;transform:translateY(80px);opacity:0;transition:all 0.3s;max-width:330px;}
+  .toast.show{transform:translateY(0);opacity:1;}
+
+  .error-box{background:rgba(200,40,40,0.15);border:1px solid rgba(200,40,40,0.5);border-radius:4px;padding:9px 11px;font-size:0.76rem;color:#ff8a80;margin-top:7px;display:none;}
+  .error-box.visible{display:block;}
+</style>
+</head>
+<body>
+
+<header>
+  <!-- SOX Erosion Solutions Logo — SVG recreation -->
+  <svg width="280" height="56" viewBox="0 0 280 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Three flowing wave marks: blue (back), tan/gold (mid), green (front) -->
+    <!-- Blue wave — leftmost/largest -->
+    <path d="M6 42 C8 28, 14 16, 18 10 C20 6, 21 4, 20 8 C18 14, 14 24, 14 36 C14 42, 15 48, 16 50 C14 48, 8 46, 6 42 Z" fill="#2563a8"/>
+    <path d="M6 42 C8 34, 11 22, 15 13 C17 8, 19 5, 20 8 C18 14, 14 25, 13 36 C12 43, 14 49, 16 51 C12 50, 7 47, 6 42 Z" fill="#1a56a0"/>
+    <!-- Tan/gold wave — middle -->
+    <path d="M14 40 C16 27, 21 15, 25 9 C27 5, 28 3, 27 7 C25 13, 21 23, 20 34 C20 40, 21 47, 22 49 C20 47, 15 44, 14 40 Z" fill="#c8a850"/>
+    <path d="M14 40 C16 32, 19 21, 23 13 C25 8, 27 5, 27 8 C25 14, 21 24, 20 35 C19 42, 21 48, 22 50 C18 49, 14 45, 14 40 Z" fill="#b89840"/>
+    <!-- Green wave — front/rightmost -->
+    <path d="M22 38 C24 25, 29 13, 33 7 C35 3, 36 2, 35 6 C33 12, 29 22, 28 33 C27 39, 28 46, 30 48 C27 46, 23 42, 22 38 Z" fill="#5cb040"/>
+    <path d="M22 38 C24 30, 27 19, 31 11 C33 6, 35 3, 35 6 C33 12, 29 23, 28 34 C27 41, 29 47, 30 49 C26 48, 22 43, 22 38 Z" fill="#4ca030"/>
+
+    <!-- SOX — large bold white text -->
+    <text x="42" y="44" font-family="Arial Black, Barlow Condensed, sans-serif" font-weight="900" font-size="36" fill="#f0f4f8" letter-spacing="-1">SOX</text>
+
+    <!-- EROSION SOLUTIONS — smaller, stacked, light gray -->
+    <text x="148" y="30" font-family="Arial, Barlow Condensed, sans-serif" font-weight="700" font-size="13" fill="#c8d8e8" letter-spacing="1.5">EROSION</text>
+    <text x="148" y="46" font-family="Arial, Barlow Condensed, sans-serif" font-weight="700" font-size="13" fill="#c8d8e8" letter-spacing="1.5">SOLUTIONS</text>
+    <!-- TM mark -->
+    <text x="265" y="50" font-family="Arial,sans-serif" font-size="7" fill="#8fa3b8">™</text>
+  </svg>
+
+  <div class="header-right">
+    <span class="powered-by">AI SIMULATION · REPLICATE</span>
+    <div class="header-badge">Pro Estimator</div>
+  </div>
+</header>
+
+<div class="app">
+  <div class="sidebar">
+
+    <div class="card">
+      <div class="section-label">Workflow</div>
+      <div class="steps">
+        <div class="step active" id="step1"><div class="step-num">1</div><span>Upload</span></div>
+        <div class="step-arrow">›</div>
+        <div class="step" id="step2"><div class="step-num">2</div><span>Scale</span></div>
+        <div class="step-arrow">›</div>
+        <div class="step" id="step3"><div class="step-num">3</div><span>Draw</span></div>
+        <div class="step-arrow">›</div>
+        <div class="step" id="step4"><div class="step-num">4</div><span>Simulate</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">1. Upload Bank Photo</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*">
+        <span style="font-size:1.7rem;display:block;margin-bottom:5px;">📸</span>
+        <p>Drop a bank or shoreline photo here, or tap to browse</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">2. Set Scale Reference</div>
+      <div class="info-box">Draw a line over a known object (dock, pipe, boat) then enter its real length.</div>
+      <div class="form-group">
+        <label>Known reference length</label>
+        <input type="number" id="refLength" placeholder="e.g. 10" min="0.1" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <select id="refUnit">
+          <option value="ft">Feet</option>
+          <option value="m">Meters</option>
+          <option value="yd">Yards</option>
+        </select>
+      </div>
+      <div class="tool-row">
+        <button class="tool-btn" id="scaleBtn" onclick="setMode('scale')">📏 Draw Scale</button>
+        <button class="tool-btn" onclick="clearScale()">✕ Clear</button>
+      </div>
+      <div id="scaleStatus" style="margin-top:6px;font-size:0.72rem;color:var(--gray);"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">3. Trace the Bank Line</div>
+      <div class="info-box">Click along the eroded shoreline edge. Double-click to finish.</div>
+      <div class="tool-row">
+        <button class="tool-btn" id="drawBtn" onclick="setMode('draw')">✏️ Trace Bank</button>
+        <button class="tool-btn" onclick="undoPoint()">↩ Undo</button>
+      </div>
+      <button class="btn-secondary" onclick="clearDraw()">Clear Trace</button>
+    </div>
+
+    <div class="card">
+      <div class="section-label">4. Settings</div>
+      <div class="form-group">
+        <label>Bank slope</label>
+        <select id="slopeSelect">
+          <option value="3:1">3:1 (gentle)</option>
+          <option value="2:1" selected>2:1 (standard)</option>
+          <option value="1.5:1">1.5:1 (steep)</option>
+          <option value="1:1">1:1 (very steep)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Vegetation goal</label>
+        <select id="vegSelect">
+          <option value="lush green turf grass">Turf grass to waterline</option>
+          <option value="native wildflowers and grass">Native wildflowers and grass</option>
+          <option value="sod and landscaping">Sod and landscaping</option>
+          <option value="riprap with grass">Riprap with grass overlay</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="estimate-panel">
+      <div class="section-label">Estimate Results</div>
+      <div class="stat-row"><span class="stat-label">Linear footage</span><span><span class="stat-value" id="resLinear">—</span><span class="stat-unit">ft</span></span></div>
+      <div class="stat-row"><span class="stat-label">Shore Sox rolls (20 ft)</span><span><span class="stat-value" id="resSoxRolls">—</span><span class="stat-unit">rolls</span></span></div>
+      <div class="stat-row"><span class="stat-label">Erosion control fabric</span><span><span class="stat-value" id="resFabric">—</span><span class="stat-unit">sq ft</span></span></div>
+      <div class="stat-row"><span class="stat-label">Fill material (est.)</span><span><span class="stat-value" id="resFill">—</span><span class="stat-unit">cu yd</span></span></div>
+    </div>
+
+    <button class="btn-primary" id="calcBtn" onclick="calculate()" disabled>Calculate Estimate</button>
+    <button class="btn-ai" id="aiBtn" onclick="runAISimulation()" disabled>✨ Generate AI Simulation</button>
+    <div class="error-box" id="errorBox"></div>
+    <button class="print-btn" onclick="printReport()">🖨 Export Report</button>
+
+  </div>
+
+  <div class="main">
+    <div class="canvas-toolbar">
+      <span class="toolbar-label">View:</span>
+      <div class="mode-pills">
+        <div class="mode-pill active" id="pillDraw" onclick="switchView('draw')">Drawing</div>
+        <div class="mode-pill" id="pillSim" onclick="switchView('sim')">AI Simulation</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:0.68rem;color:var(--gray);letter-spacing:1px;" id="coordDisplay">— , —</span>
+        <button class="tool-btn" style="flex:none;padding:4px 10px;" onclick="resetView()">⟲ Reset</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="mainCanvas"></canvas>
+
+      <div class="spinner-wrap" id="spinnerWrap">
+        <div class="spinner"></div>
+        <div class="spinner-text" id="spinnerText">Generating simulation</div>
+        <div class="spinner-sub" id="spinnerSub">Analyzing bank conditions...</div>
+      </div>
+
+      <div class="ai-result-wrap" id="aiResultWrap">
+        <div class="before-after">
+          <div class="ba-panel">
+            <img class="ba-img" id="beforeImg" src="" alt="Before">
+            <div class="ba-label">BEFORE</div>
+          </div>
+          <div class="divider-bar"><span>BEFORE / AFTER</span></div>
+          <div class="ba-panel">
+            <img class="ba-img" id="afterImg" src="" alt="After">
+            <div class="ba-label after">AFTER — SHORE SOX</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="placeholder" id="placeholder">
+        <span class="placeholder-icon">🌊</span>
+        <h2>Upload a bank photo to begin</h2>
+        <p>Supports JPG, PNG, HEIC from phone or desktop</p>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-item"><div class="status-dot" id="dotUpload"></div>Photo</div>
+      <div class="status-item"><div class="status-dot" id="dotScale"></div>Scale</div>
+      <div class="status-item"><div class="status-dot" id="dotTrace"></div>Traced</div>
+      <div class="status-item"><div class="status-dot" id="dotCalc"></div>Estimated</div>
+      <div class="status-item"><div class="status-dot" id="dotSim"></div>Simulated</div>
+      <div style="margin-left:auto;font-size:0.68rem;color:var(--gray);" id="modeLabel">MODE: IDLE</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '/api/replicate';
+const MODEL_VERSION = 'stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3';
+
+const state={img:null,imgW:0,imgH:0,canvasW:0,canvasH:0,offsetX:0,offsetY:0,scale:1,scaleLine:null,scalePhase:0,drawPoints:[],mode:'idle',pxPerUnit:null,lastEstimate:null,originalDataURL:null};
+
+const canvas=document.getElementById('mainCanvas');
+const ctx=canvas.getContext('2d');
+const wrap=document.getElementById('canvasWrap');
+
+function resizeCanvas(){
+  const r=wrap.getBoundingClientRect();
+  canvas.width=r.width;canvas.height=r.height;
+  state.canvasW=r.width;state.canvasH=r.height;
+  if(state.img)fitImage();
+  render();
+}
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
+
+function fitImage(){
+  const pad=36;
+  const sx=(state.canvasW-pad*2)/state.imgW;
+  const sy=(state.canvasH-pad*2)/state.imgH;
+  state.scale=Math.min(sx,sy,1);
+  state.offsetX=(state.canvasW-state.imgW*state.scale)/2;
+  state.offsetY=(state.canvasH-state.imgH*state.scale)/2;
+}
+function canvasToImg(cx,cy){return{x:(cx-state.offsetX)/state.scale,y:(cy-state.offsetY)/state.scale};}
+
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const url=URL.createObjectURL(f);
+  const img=new Image();
+  img.onload=()=>{
+    state.img=img;state.imgW=img.naturalWidth;state.imgH=img.naturalHeight;
+    state.scaleLine=null;state.scaleSet=false;state.drawPoints=[];state.pxPerUnit=null;state.originalDataURL=null;
+    fitImage();
+    document.getElementById('placeholder').style.display='none';
+    canvas.style.display='block';
+    hideAIResult();
+    const tmp=document.createElement('canvas');
+    tmp.width=state.imgW;tmp.height=state.imgH;
+    tmp.getContext('2d').drawImage(img,0,0);
+    state.originalDataURL=tmp.toDataURL('image/png');
+    updateDot('dotUpload',true);setStep(2);render();
+    toast('Photo loaded. Draw a scale reference line next.');
+  };
+  img.src=url;
+});
+
+const uploadZone=document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('dragover');});
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop',e=>{
+  e.preventDefault();uploadZone.classList.remove('dragover');
+  const f=e.dataTransfer.files[0];
+  if(f){document.getElementById('fileInput').files=e.dataTransfer.files;document.getElementById('fileInput').dispatchEvent(new Event('change'));}
+});
+
+function setMode(m){
+  state.mode=m;state.scalePhase=0;
+  document.getElementById('scaleBtn').classList.toggle('active',m==='scale');
+  document.getElementById('drawBtn').classList.toggle('active',m==='draw');
+  document.getElementById('modeLabel').textContent='MODE: '+m.toUpperCase();
+  canvas.style.cursor=(m==='idle')?'default':'crosshair';
+}
+
+let mousePos={x:0,y:0};
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  mousePos={x:e.clientX-r.left,y:e.clientY-r.top};
+  const ip=canvasToImg(mousePos.x,mousePos.y);
+  document.getElementById('coordDisplay').textContent=`${Math.round(ip.x)} , ${Math.round(ip.y)}`;
+  if(state.mode==='draw'&&state.drawPoints.length>0)render();
+});
+
+canvas.addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect();
+  const cx=e.clientX-r.left,cy=e.clientY-r.top;
+  if(state.mode==='scale'){
+    if(state.scalePhase===0){state.scaleLine={x1:cx,y1:cy,x2:cx,y2:cy};state.scalePhase=1;document.getElementById('scaleStatus').textContent='Click second point of reference object';}
+    else{state.scaleLine.x2=cx;state.scaleLine.y2=cy;state.scalePhase=0;computeScale();setMode('idle');}
+    render();
+  }
+  if(state.mode==='draw'){
+    state.drawPoints.push({x:cx,y:cy});render();
+    if(state.drawPoints.length>=2){document.getElementById('calcBtn').disabled=false;updateDot('dotTrace',true);setStep(4);}
+  }
+});
+
+canvas.addEventListener('dblclick',()=>{
+  if(state.mode==='draw'&&state.drawPoints.length>1){setMode('idle');calculate();}
+});
+
+function computeScale(){
+  const sl=state.scaleLine;
+  const dx=sl.x2-sl.x1,dy=sl.y2-sl.y1;
+  const pxLen=Math.sqrt(dx*dx+dy*dy);
+  const realLen=parseFloat(document.getElementById('refLength').value);
+  const unit=document.getElementById('refUnit').value;
+  if(!realLen||realLen<=0||pxLen<5){toast('Enter a valid reference length first.');return;}
+  state.pxPerUnit=pxLen/realLen;
+  const ul=unit==='ft'?'feet':unit==='m'?'meters':'yards';
+  document.getElementById('scaleStatus').textContent=`✓ Scale set: ${pxLen.toFixed(1)}px = ${realLen} ${ul}`;
+  updateDot('dotScale',true);setStep(3);
+  toast('Scale set. Now trace the bank line.');
+}
+function clearScale(){state.scaleLine=null;state.pxPerUnit=null;document.getElementById('scaleStatus').textContent='';updateDot('dotScale',false);render();}
+function clearDraw(){state.drawPoints=[];document.getElementById('calcBtn').disabled=true;document.getElementById('aiBtn').disabled=true;updateDot('dotTrace',false);updateDot('dotCalc',false);updateDot('dotSim',false);resetResults();hideAIResult();render();}
+function undoPoint(){if(state.drawPoints.length>0){state.drawPoints.pop();render();}}
+
+function calculate(){
+  if(state.drawPoints.length<2){toast('Trace at least 2 points.');return;}
+  let pxLen=0;
+  for(let i=1;i<state.drawPoints.length;i++){
+    const dx=state.drawPoints[i].x-state.drawPoints[i-1].x;
+    const dy=state.drawPoints[i].y-state.drawPoints[i-1].y;
+    pxLen+=Math.sqrt(dx*dx+dy*dy);
+  }
+  let linearFt;
+  if(state.pxPerUnit){
+    const unit=document.getElementById('refUnit').value;
+    let ul=pxLen/state.pxPerUnit;
+    if(unit==='m')ul*=3.28084;
+    if(unit==='yd')ul*=3;
+    linearFt=ul;
+  } else {
+    linearFt=pxLen*0.05;
+    toast('No scale set — estimate is approximate.');
+  }
+  const slope=document.getElementById('slopeSelect').value;
+  const sr=parseFloat(slope.split(':')[0]);
+  const bankHeight=3,bankWidth=sr*bankHeight;
+  const rolls=Math.ceil(linearFt/20)+1;
+  const fabricSqFt=Math.round(linearFt*(bankWidth+1));
+  const fillCuYd=Math.round((linearFt*bankWidth*bankHeight*0.5)/27);
+  document.getElementById('resLinear').textContent=linearFt.toFixed(1);
+  document.getElementById('resSoxRolls').textContent=rolls;
+  document.getElementById('resFabric').textContent=fabricSqFt.toLocaleString();
+  document.getElementById('resFill').textContent=fillCuYd;
+  updateDot('dotCalc',true);setStep(4);
+  state.lastEstimate={linearFt,rolls,fabricSqFt,fillCuYd};
+  document.getElementById('aiBtn').disabled=false;
+  render();
+  toast(`${linearFt.toFixed(1)} ft of bank — ${rolls} Shore Sox rolls. Ready to simulate!`);
+}
+function resetResults(){['resLinear','resSoxRolls','resFabric','resFill'].forEach(id=>document.getElementById(id).textContent='—');state.lastEstimate=null;}
+
+function switchView(v){
+  document.getElementById('pillDraw').classList.toggle('active',v==='draw');
+  document.getElementById('pillSim').classList.toggle('active',v==='sim');
+  if(v==='sim'){
+    const ai=document.getElementById('afterImg');
+    if(ai.src&&ai.src!==window.location.href)document.getElementById('aiResultWrap').classList.add('visible');
+  } else {
+    hideAIResult();
+  }
+}
+function hideAIResult(){document.getElementById('aiResultWrap').classList.remove('visible');}
+
+function buildMaskDataURL(){
+  const mc=document.createElement('canvas');
+  mc.width=state.imgW;mc.height=state.imgH;
+  const mctx=mc.getContext('2d');
+  mctx.fillStyle='black';mctx.fillRect(0,0,state.imgW,state.imgH);
+  if(state.drawPoints.length<2)return mc.toDataURL('image/png');
+  const imgPts=state.drawPoints.map(p=>canvasToImg(p.x,p.y));
+  // Thick stroke along the bank
+  mctx.strokeStyle='white';
+  mctx.lineWidth=Math.max(80,state.imgH*0.18);
+  mctx.lineCap='round';mctx.lineJoin='round';
+  mctx.beginPath();
+  mctx.moveTo(imgPts[0].x,imgPts[0].y);
+  for(let i=1;i<imgPts.length;i++)mctx.lineTo(imgPts[i].x,imgPts[i].y);
+  mctx.stroke();
+  // Fill the bank area below the line
+  mctx.fillStyle='white';
+  mctx.beginPath();
+  mctx.moveTo(imgPts[0].x,imgPts[0].y);
+  for(let i=1;i<imgPts.length;i++)mctx.lineTo(imgPts[i].x,imgPts[i].y);
+  mctx.lineTo(imgPts[imgPts.length-1].x,state.imgH);
+  mctx.lineTo(imgPts[0].x,state.imgH);
+  mctx.closePath();mctx.fill();
+  return mc.toDataURL('image/png');
+}
+
+async function runAISimulation(){
+  if(!state.originalDataURL){toast('Upload a photo first.');return;}
+  if(!state.drawPoints.length){toast('Trace the bank line first.');return;}
+  showError('');
+  showSpinner(true,'Preparing image...');
+  document.getElementById('aiBtn').disabled=true;
+  const veg=document.getElementById('vegSelect').value;
+  const slope=document.getElementById('slopeSelect').value;
+  const prompt=`Professional landscape photo of a beautifully restored lake shoreline. ${veg} growing right to the water's edge on a smooth graded ${slope} slope. A Shore Sox erosion control tube visible at the waterline — a tan cylindrical fabric sock filled with soil stabilizing the bank. Crystal clear lake water. Lush healthy vegetation. Sunny day. Photorealistic, high resolution, 4k.`;
+  const negPrompt='erosion, bare soil, dirt exposed, muddy bank, degraded, brown earth, debris, ugly, blurry, cartoon, painting, illustration, render, cgi';
+  try {
+    showSpinner(true,'Sending to Replicate AI...');
+    const maskDataURL=buildMaskDataURL();
+    const imageB64=state.originalDataURL.split(',')[1];
+    const maskB64=maskDataURL.split(',')[1];
+    const body={
+      version:MODEL_VERSION,
+      input:{
+        prompt,negative_prompt:negPrompt,
+        image:'data:image/png;base64,'+imageB64,
+        mask:'data:image/png;base64,'+maskB64,
+        num_inference_steps:30,
+        guidance_scale:8,
+        strength:0.9,
+      }
+    };
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){const err=await res.json();throw new Error(err.detail||'Replicate error: '+res.status);}
+    const prediction=await res.json();
+    await pollPrediction(prediction.id);
+  } catch(err){
+    showSpinner(false);
+    document.getElementById('aiBtn').disabled=false;
+    showError('Error: '+err.message);
+  }
+}
+
+async function pollPrediction(id){
+  const msgs=['AI is painting the restored bank...','Adding Shore Sox tube detail...','Growing the vegetation...','Almost done...'];
+  let attempt=0;
+  while(true){
+    await sleep(3000);
+    attempt++;
+    showSpinner(true,msgs[Math.min(attempt-1,msgs.length-1)]);
+    const res = await fetch(`${API_BASE}?id=${id}`, {
+      headers: {}
+    });
+    const data=await res.json();
+    if(data.status==='succeeded'){
+      const outputUrl=Array.isArray(data.output)?data.output[0]:data.output;
+      showSimulationResult(outputUrl);return;
+    }
+    if(data.status==='failed'||data.status==='canceled')throw new Error('Generation failed: '+(data.error||data.status));
+    if(attempt>40)throw new Error('Timed out waiting for result.');
+  }
+}
+
+function showSimulationResult(afterUrl){
+  showSpinner(false);
+  document.getElementById('beforeImg').src=state.originalDataURL;
+  document.getElementById('afterImg').src=afterUrl;
+  document.getElementById('aiResultWrap').classList.add('visible');
+  updateDot('dotSim',true);
+  document.getElementById('aiBtn').disabled=false;
+  document.getElementById('pillSim').classList.add('active');
+  document.getElementById('pillDraw').classList.remove('active');
+  toast('AI simulation complete! Side-by-side comparison ready.');
+}
+
+function showSpinner(on,msg=''){
+  document.getElementById('spinnerWrap').classList.toggle('visible',on);
+  if(msg){document.getElementById('spinnerText').textContent=msg;}
+}
+function showError(msg){const eb=document.getElementById('errorBox');eb.textContent=msg;eb.classList.toggle('visible',!!msg);}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!state.img)return;
+  ctx.drawImage(state.img,state.offsetX,state.offsetY,state.imgW*state.scale,state.imgH*state.scale);
+  if(state.scaleLine){
+    const sl=state.scaleLine;
+    ctx.save();
+    ctx.strokeStyle='#ffeb3b';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(sl.x1,sl.y1);ctx.lineTo(sl.x2,sl.y2);ctx.stroke();
+    ctx.setLineDash([]);
+    [[sl.x1,sl.y1],[sl.x2,sl.y2]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle='#ffeb3b';ctx.fill();});
+    const mx=(sl.x1+sl.x2)/2,my=(sl.y1+sl.y2)/2;
+    ctx.fillStyle='#ffeb3b';ctx.font='bold 11px Barlow Condensed,sans-serif';ctx.textAlign='center';
+    ctx.fillText(`SCALE: ${document.getElementById('refLength').value||'?'} ${document.getElementById('refUnit').value}`,mx,my-10);
+    ctx.restore();
+  }
+  if(state.drawPoints.length>0){
+    ctx.save();
+    ctx.shadowColor='#76c442';ctx.shadowBlur=10;
+    ctx.strokeStyle='#76c442';ctx.lineWidth=3;ctx.lineJoin='round';ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(state.drawPoints[0].x,state.drawPoints[0].y);
+    for(let i=1;i<state.drawPoints.length;i++)ctx.lineTo(state.drawPoints[i].x,state.drawPoints[i].y);
+    if(state.mode==='draw'){ctx.setLineDash([5,5]);ctx.lineTo(mousePos.x,mousePos.y);}
+    ctx.stroke();ctx.setLineDash([]);ctx.shadowBlur=0;
+    state.drawPoints.forEach((p,i)=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,i===0?7:5,0,Math.PI*2);
+      ctx.fillStyle=i===0?'#76c442':'rgba(118,196,66,0.7)';ctx.fill();
+      ctx.strokeStyle='white';ctx.lineWidth=1.5;ctx.stroke();
+    });
+    if(state.lastEstimate){
+      const lp=state.drawPoints[state.drawPoints.length-1];
+      ctx.fillStyle='#76c442';ctx.font='bold 13px Barlow Condensed,sans-serif';ctx.textAlign='left';
+      ctx.fillText(`${state.lastEstimate.linearFt.toFixed(1)} ft`,lp.x+10,lp.y-6);
+    }
+    ctx.restore();
+  }
+}
+
+function updateDot(id,on){document.getElementById(id).classList.toggle('active',on);}
+function setStep(n){for(let i=1;i<=4;i++){const el=document.getElementById('step'+i);el.classList.remove('active','done');if(i<n)el.classList.add('done');if(i===n)el.classList.add('active');}}
+let toastTimer;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),4200);}
+function resetView(){if(state.img){fitImage();render();}}
+
+function printReport(){
+  if(!state.lastEstimate){toast('Run a calculation first.');return;}
+  const e=state.lastEstimate;
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Shore Sox Estimate</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#1a1a2e;}h1{color:#4caf50;}h2{color:#1565c0;border-bottom:2px solid #4caf50;padding-bottom:6px;}table{border-collapse:collapse;width:100%;margin-top:10px;}td,th{border:1px solid #ccc;padding:10px 14px;}th{background:#f0f4f8;}.val{font-weight:bold;font-size:1.1em;color:#1565c0;}.footer{margin-top:40px;font-size:0.8em;color:#666;}</style></head><body>
+  <h1>Shore Sox — Bank Stabilization Estimate</h1>
+  <p>Generated: ${new Date().toLocaleDateString()} | Slope: ${document.getElementById('slopeSelect').value} | Vegetation: ${document.getElementById('vegSelect').value}</p>
+  <h2>Material Estimate</h2>
+  <table>
+    <tr><th>Item</th><th>Quantity</th></tr>
+    <tr><td>Linear Footage</td><td class="val">${e.linearFt.toFixed(1)} ft</td></tr>
+    <tr><td>Shore Sox Rolls (20 ft each)</td><td class="val">${e.rolls} rolls</td></tr>
+    <tr><td>Erosion Control Fabric</td><td class="val">${e.fabricSqFt.toLocaleString()} sq ft</td></tr>
+    <tr><td>Fill Material</td><td class="val">${e.fillCuYd} cu yd</td></tr>
+  </table>
+  <div class="footer"><p>Shore Sox® | shoresox.com</p><p>Quantities are estimates. Field verification recommended before ordering.</p></div>
+  </body></html>`);
+  w.document.close();w.print();
+}
+</script>
+</body>
+</html>
