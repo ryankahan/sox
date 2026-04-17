@@ -135,6 +135,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.0.5</div>
   </div>
 </header>
 
@@ -329,10 +330,14 @@ document.getElementById('fileInput').addEventListener('change',e=>{
     document.getElementById('placeholder').style.display='none';
     canvas.style.display='block';
     hideAIResult();
+    const MAX=512;
+    const ratio=Math.min(MAX/state.imgW,MAX/state.imgH,1);
+    const rw=Math.round(state.imgW*ratio),rh=Math.round(state.imgH*ratio);
     const tmp=document.createElement('canvas');
-    tmp.width=state.imgW;tmp.height=state.imgH;
-    tmp.getContext('2d').drawImage(img,0,0);
-    state.originalDataURL=tmp.toDataURL('image/png');
+    tmp.width=rw;tmp.height=rh;
+    tmp.getContext('2d').drawImage(img,0,0,rw,rh);
+    state.originalDataURL=tmp.toDataURL('image/jpeg',0.7);
+    state.resW=rw;state.resH=rh;
     updateDot('dotUpload',true);setStep(2);render();
     toast('Photo loaded. Draw a scale reference line next.');
   };
@@ -451,14 +456,15 @@ function hideAIResult(){document.getElementById('aiResultWrap').classList.remove
 
 function buildMaskDataURL(){
   const mc=document.createElement('canvas');
-  mc.width=state.imgW;mc.height=state.imgH;
+  const mw=state.resW||state.imgW, mh=state.resH||state.imgH;
+  mc.width=mw;mc.height=mh;
   const mctx=mc.getContext('2d');
-  mctx.fillStyle='black';mctx.fillRect(0,0,state.imgW,state.imgH);
+  mctx.fillStyle='black';mctx.fillRect(0,0,mw,mh);
   if(state.drawPoints.length<2)return mc.toDataURL('image/png');
-  const imgPts=state.drawPoints.map(p=>canvasToImg(p.x,p.y));
-  // Thick stroke along the bank
+  const scaleX=mw/state.imgW, scaleY=mh/state.imgH;
+  const imgPts=state.drawPoints.map(p=>{const ip=canvasToImg(p.x,p.y);return{x:ip.x*scaleX,y:ip.y*scaleY};});
   mctx.strokeStyle='white';
-  mctx.lineWidth=Math.max(80,state.imgH*0.18);
+  mctx.lineWidth=Math.max(80,mh*0.18);
   mctx.lineCap='round';mctx.lineJoin='round';
   mctx.beginPath();
   mctx.moveTo(imgPts[0].x,imgPts[0].y);
@@ -469,10 +475,34 @@ function buildMaskDataURL(){
   mctx.beginPath();
   mctx.moveTo(imgPts[0].x,imgPts[0].y);
   for(let i=1;i<imgPts.length;i++)mctx.lineTo(imgPts[i].x,imgPts[i].y);
-  mctx.lineTo(imgPts[imgPts.length-1].x,state.imgH);
-  mctx.lineTo(imgPts[0].x,state.imgH);
+  mctx.lineTo(imgPts[imgPts.length-1].x,mh);
+  mctx.lineTo(imgPts[0].x,mh);
   mctx.closePath();mctx.fill();
   return mc.toDataURL('image/png');
+}
+
+async function uploadToReplicate(dataURL){
+  // Upload directly from browser to Replicate — bypasses Vercel size limit
+  const base64=dataURL.split(',')[1];
+  const type=dataURL.indexOf('image/jpeg')>-1?'image/jpeg':'image/png';
+  const binary=atob(base64);
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  const blob=new Blob([bytes],{type});
+  const form=new FormData();
+  form.append('content',blob,'image.'+( type==='image/jpeg'?'jpg':'png'));
+  // Get token from our proxy first
+  const tokenRes=await fetch(API_BASE+'?action=token');
+  if(!tokenRes.ok) throw new Error('Could not get upload token');
+  const {token}=await tokenRes.json();
+  const res=await fetch('https://api.replicate.com/v1/files',{
+    method:'POST',
+    headers:{'Authorization':'Token '+token},
+    body:form,
+  });
+  if(!res.ok) throw new Error('Upload failed: '+res.status);
+  const result=await res.json();
+  return result.urls?.get||result.url;
 }
 
 async function runAISimulation(){
@@ -486,25 +516,27 @@ async function runAISimulation(){
   const prompt=`Professional landscape photo of a beautifully restored lake shoreline. ${veg} growing right to the water's edge on a smooth graded ${slope} slope. A Shore Sox erosion control tube visible at the waterline — a tan cylindrical fabric sock filled with soil stabilizing the bank. Crystal clear lake water. Lush healthy vegetation. Sunny day. Photorealistic, high resolution, 4k.`;
   const negPrompt='erosion, bare soil, dirt exposed, muddy bank, degraded, brown earth, debris, ugly, blurry, cartoon, painting, illustration, render, cgi';
   try {
-    showSpinner(true,'Sending to Replicate AI...');
     const maskDataURL=buildMaskDataURL();
-    const imageB64=state.originalDataURL.split(',')[1];
-    const maskB64=maskDataURL.split(',')[1];
+    showSpinner(true,'Uploading photo to AI...');
+    const imageUrl=await uploadToReplicate(state.originalDataURL);
+    showSpinner(true,'Uploading mask...');
+    const maskUrl=await uploadToReplicate(maskDataURL);
+    showSpinner(true,'Generating simulation...');
     const body={
       version:MODEL_VERSION,
       input:{
         prompt,negative_prompt:negPrompt,
-        image:'data:image/png;base64,'+imageB64,
-        mask:'data:image/png;base64,'+maskB64,
+        image:imageUrl,
+        mask:maskUrl,
         num_inference_steps:30,
         guidance_scale:8,
         strength:0.9,
       }
     };
-    const res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+    const res=await fetch(API_BASE,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
     });
     if(!res.ok){const err=await res.json();throw new Error(err.detail||'Replicate error: '+res.status);}
     const prediction=await res.json();
