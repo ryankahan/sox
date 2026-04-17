@@ -1,21 +1,15 @@
 module.exports = async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   const REPLICATE_TOKEN = process.env.REPLICATE_TOKEN;
-  if (!REPLICATE_TOKEN) {
-    return res.status(500).json({ error: 'REPLICATE_TOKEN not configured' });
-  }
+  if (!REPLICATE_TOKEN) return res.status(500).json({ error: 'REPLICATE_TOKEN not configured' });
 
   try {
     if (req.method === 'POST') {
-      // Start a prediction
       const response = await fetch('https://api.replicate.com/v1/predictions', {
         method: 'POST',
         headers: {
@@ -29,10 +23,8 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
-      // Poll prediction status
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: 'Missing prediction id' });
-
       const response = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
         headers: { 'Authorization': `Token ${REPLICATE_TOKEN}` },
       });
@@ -41,8 +33,15 @@ module.exports = async function handler(req, res) {
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
-
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
-}
+};
+
+module.exports.config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
