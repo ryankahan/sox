@@ -492,7 +492,7 @@ async function uploadToReplicate(dataURL){
   const form=new FormData();
   form.append('content',blob,'image.'+( type==='image/jpeg'?'jpg':'png'));
   // Get token from our proxy first
-  const tokenRes=await fetch(API_BASE+'?action=token');
+  const tokenRes=await fetch(API_BASE+'?action=upload');
   if(!tokenRes.ok) throw new Error('Could not get upload token');
   const {token}=await tokenRes.json();
   const res=await fetch('https://api.replicate.com/v1/files',{

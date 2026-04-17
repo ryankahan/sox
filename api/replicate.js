@@ -5,15 +5,27 @@ const handler = async function(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   const REPLICATE_TOKEN = process.env.REPLICATE_TOKEN;
   if (!REPLICATE_TOKEN) return res.status(500).json({ error: 'REPLICATE_TOKEN not configured' });
-  if (req.method === 'GET' && req.query.action === 'token') {
-    return res.status(200).json({ token: REPLICATE_TOKEN });
+  if (req.method === 'POST' && req.query.action === 'upload') {
+    const { data, type } = req.body;
+    const buffer = Buffer.from(data, 'base64');
+    const boundary = '----FormBoundary' + Math.random().toString(36);
+    const ext = type.includes('jpeg') ? 'jpg' : 'png';
+    const header = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="content"; filename="image.${ext}"\r\nContent-Type: ${type}\r\n\r\n`);
+    const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const body = Buffer.concat([header, buffer, footer]);
+    const response = await fetch('https://api.replicate.com/v1/files', {
+      method: 'POST',
+      headers: { 'Authorization': `Token ${REPLICATE_TOKEN}`, 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length },
+      body,
+    });
+    const result = await response.json();
+    if (!response.ok) return res.status(response.status).json(result);
+    return res.status(200).json({ url: result.urls?.get || result.url });
   }
   if (req.method === 'GET') {
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: 'Missing prediction id' });
-    const response = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
-      headers: { 'Authorization': `Token ${REPLICATE_TOKEN}` },
-    });
+    const response = await fetch(`https://api.replicate.com/v1/predictions/${id}`, { headers: { 'Authorization': `Token ${REPLICATE_TOKEN}` } });
     const data = await response.json();
     return res.status(response.status).json(data);
   }
@@ -28,4 +40,5 @@ const handler = async function(req, res) {
   }
   return res.status(405).json({ error: 'Method not allowed' });
 };
+handler.config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 module.exports = handler;
