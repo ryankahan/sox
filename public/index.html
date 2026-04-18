@@ -135,7 +135,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.2</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.3</div>
   </div>
 </header>
 
@@ -514,7 +514,7 @@ async function runAISimulation(){
   document.getElementById('aiBtn').disabled=true;
   const veg=document.getElementById('vegSelect').value;
   const slope=document.getElementById('slopeSelect').value;
-  const prompt=`lush green ${veg} covering the bare eroded soil on the lake bank, smooth graded slope down to the water, healthy thick grass growing all the way to the waterline, natural looking, photorealistic, seamless`;
+  const prompt=`${veg} perfectly matching the existing surrounding grass in the photo, same grass species same color same texture, seamlessly blended with the grass already in the image, smooth natural slope from existing lawn down to water edge, no bare soil visible, photorealistic, continuous lawn, identical to adjacent grass`;
   const negPrompt='different scene, different angle, different background, different sky, cartoon, painting, illustration, render, blurry, watermark, text';
   try {
     const maskDataURL=buildMaskDataURL();
