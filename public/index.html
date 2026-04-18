@@ -137,7 +137,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.4</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.5</div>
   </div>
 </header>
 
@@ -305,7 +305,7 @@
 
 <script>
 const API_BASE = '/api/replicate';
-const MODEL_VERSION = 'black-forest-labs/flux-fill-pro';
+const MODEL_VERSION = 'black-forest-labs/flux-kontext-pro';
 
 const state={img:null,imgW:0,imgH:0,canvasW:0,canvasH:0,offsetX:0,offsetY:0,scale:1,scaleLine:null,scalePhase:0,drawPoints:[],waterPoints:[],mode:'idle',pxPerUnit:null,lastEstimate:null,originalDataURL:null};
 
@@ -526,20 +526,14 @@ async function runAISimulation(){
   const prompt=promptBox&&promptBox.value.trim()?promptBox.value.trim():`${veg} perfectly matching the existing surrounding grass in the photo, same grass species same color same texture, seamlessly blended, smooth natural slope from existing grass edge down to waterline, no bare soil, photorealistic`;
   const negPrompt='different scene, different angle, different background, different sky, cartoon, painting, illustration, render, blurry, watermark, text';
   try {
-    const maskDataURL=buildMaskDataURL();
     showSpinner(true,'Uploading photo to AI...');
     const imageUrl=await uploadToReplicate(state.originalDataURL);
-    showSpinner(true,'Uploading mask...');
-    const maskUrl=await uploadToReplicate(maskDataURL);
     showSpinner(true,'Generating simulation...');
     const body={
       model:MODEL_VERSION,
       input:{
         prompt,
-        image:imageUrl,
-        mask:maskUrl,
-        steps:50,
-        guidance:30,
+        input_image:imageUrl,
         output_format:'jpg',
       }
     };
@@ -674,7 +668,7 @@ function resetView(){if(state.img){fitImage();render();}}
 // Init prompt box
 window.addEventListener('load', function(){
   const defaultPrompt = document.getElementById('aiPromptBox');
-  if(defaultPrompt) defaultPrompt.value = 'grass perfectly matching the existing surrounding lawn in the photo, same species same color same texture, seamlessly blended, smooth natural slope from existing grass edge down to waterline, no bare soil, photorealistic, continuous lawn identical to adjacent grass';
+  if(defaultPrompt) defaultPrompt.value = 'Replace the bare eroded soil on the lake bank with lush green grass that matches the existing lawn. Extend the grass smoothly from the top grassy edge down the slope, transitioning naturally into the water at the shoreline. Keep everything else in the image identical.';
 });
 
 function printReport(){
