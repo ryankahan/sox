@@ -135,7 +135,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.1</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.2</div>
   </div>
 </header>
 
@@ -604,9 +604,10 @@ function render(){
     ctx.fillText(`SCALE: ${document.getElementById('refLength').value||'?'} ${document.getElementById('refUnit').value}`,mx,my-10);
     ctx.restore();
   }
+  // Grass edge (green)
   if(state.drawPoints.length>0){
     ctx.save();
-    ctx.shadowColor='#76c442';ctx.shadowBlur=10;
+    ctx.shadowColor='#76c442';ctx.shadowBlur=8;
     ctx.strokeStyle='#76c442';ctx.lineWidth=3;ctx.lineJoin='round';ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(state.drawPoints[0].x,state.drawPoints[0].y);
     for(let i=1;i<state.drawPoints.length;i++)ctx.lineTo(state.drawPoints[i].x,state.drawPoints[i].y);
@@ -617,12 +618,41 @@ function render(){
       ctx.fillStyle=i===0?'#76c442':'rgba(118,196,66,0.7)';ctx.fill();
       ctx.strokeStyle='white';ctx.lineWidth=1.5;ctx.stroke();
     });
+    ctx.save();ctx.fillStyle='#76c442';ctx.font='bold 10px Barlow Condensed,sans-serif';
+    ctx.textAlign='left';ctx.fillText('GRASS EDGE',state.drawPoints[0].x+8,state.drawPoints[0].y-8);ctx.restore();
     if(state.lastEstimate){
       const lp=state.drawPoints[state.drawPoints.length-1];
       ctx.fillStyle='#76c442';ctx.font='bold 13px Barlow Condensed,sans-serif';ctx.textAlign='left';
       ctx.fillText(`${state.lastEstimate.linearFt.toFixed(1)} ft`,lp.x+10,lp.y-6);
     }
     ctx.restore();
+  }
+  // Waterline (blue)
+  if(state.waterPoints.length>0){
+    ctx.save();
+    ctx.shadowColor='#42a5f5';ctx.shadowBlur=8;
+    ctx.strokeStyle='#42a5f5';ctx.lineWidth=3;ctx.lineJoin='round';ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(state.waterPoints[0].x,state.waterPoints[0].y);
+    for(let i=1;i<state.waterPoints.length;i++)ctx.lineTo(state.waterPoints[i].x,state.waterPoints[i].y);
+    if(state.mode==='water'){ctx.setLineDash([5,5]);ctx.lineTo(mousePos.x,mousePos.y);}
+    ctx.stroke();ctx.setLineDash([]);ctx.shadowBlur=0;
+    state.waterPoints.forEach((p,i)=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,i===0?7:5,0,Math.PI*2);
+      ctx.fillStyle=i===0?'#42a5f5':'rgba(66,165,245,0.7)';ctx.fill();
+      ctx.strokeStyle='white';ctx.lineWidth=1.5;ctx.stroke();
+    });
+    ctx.fillStyle='#42a5f5';ctx.font='bold 10px Barlow Condensed,sans-serif';
+    ctx.textAlign='left';ctx.fillText('WATERLINE',state.waterPoints[0].x+8,state.waterPoints[0].y-8);
+    ctx.restore();
+  }
+  // Shade zone between lines
+  if(state.drawPoints.length>1&&state.waterPoints.length>1){
+    ctx.save();ctx.globalAlpha=0.15;ctx.fillStyle='#76c442';
+    ctx.beginPath();
+    ctx.moveTo(state.drawPoints[0].x,state.drawPoints[0].y);
+    for(let i=1;i<state.drawPoints.length;i++) ctx.lineTo(state.drawPoints[i].x,state.drawPoints[i].y);
+    for(let i=state.waterPoints.length-1;i>=0;i--) ctx.lineTo(state.waterPoints[i].x,state.waterPoints[i].y);
+    ctx.closePath();ctx.fill();ctx.restore();
   }
 }
 
