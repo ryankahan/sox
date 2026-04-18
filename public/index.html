@@ -61,6 +61,8 @@
   .info-box{background:rgba(21,101,192,0.1);border-left:3px solid var(--blue-accent);border-radius:0 4px 4px 0;padding:7px 9px;font-size:0.74rem;color:var(--gray);line-height:1.5;margin-bottom:7px;}
   .print-btn{background:rgba(21,101,192,0.2);border:1px solid var(--blue-accent);border-radius:4px;color:var(--white);padding:7px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:0.8rem;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;width:100%;margin-top:6px;}
   .print-btn:hover{background:rgba(21,101,192,0.4);}
+  textarea{width:100%;background:rgba(6,16,32,0.8);border:1px solid var(--border);border-radius:4px;color:var(--white);padding:6px 10px;font-family:'Barlow',sans-serif;font-size:0.78rem;outline:none;resize:vertical;line-height:1.4;}
+  textarea:focus{border-color:var(--green-bright);}
 
   .main{display:flex;flex-direction:column;background:#070f1e;position:relative;overflow:hidden;}
   .canvas-toolbar{background:rgba(13,42,74,0.9);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
@@ -135,7 +137,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.3</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.4</div>
   </div>
 </header>
 
@@ -222,6 +224,12 @@
           <option value="riprap with grass">Riprap with grass overlay</option>
         </select>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">AI Prompt Editor</div>
+      <div class="info-box">Edit the prompt sent to the AI. Adjust until results look right — no redeploy needed.</div>
+      <textarea id="aiPromptBox" rows="5"></textarea>
     </div>
 
     <div class="estimate-panel">
@@ -514,7 +522,8 @@ async function runAISimulation(){
   document.getElementById('aiBtn').disabled=true;
   const veg=document.getElementById('vegSelect').value;
   const slope=document.getElementById('slopeSelect').value;
-  const prompt=`${veg} perfectly matching the existing surrounding grass in the photo, same grass species same color same texture, seamlessly blended with the grass already in the image, smooth natural slope from existing lawn down to water edge, no bare soil visible, photorealistic, continuous lawn, identical to adjacent grass`;
+  const promptBox=document.getElementById('aiPromptBox');
+  const prompt=promptBox&&promptBox.value.trim()?promptBox.value.trim():`${veg} perfectly matching the existing surrounding grass in the photo, same grass species same color same texture, seamlessly blended, smooth natural slope from existing grass edge down to waterline, no bare soil, photorealistic`;
   const negPrompt='different scene, different angle, different background, different sky, cartoon, painting, illustration, render, blurry, watermark, text';
   try {
     const maskDataURL=buildMaskDataURL();
@@ -661,6 +670,12 @@ function setStep(n){for(let i=1;i<=4;i++){const el=document.getElementById('step
 let toastTimer;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),4200);}
 function resetView(){if(state.img){fitImage();render();}}
+
+// Init prompt box
+window.addEventListener('load', function(){
+  const defaultPrompt = document.getElementById('aiPromptBox');
+  if(defaultPrompt) defaultPrompt.value = 'grass perfectly matching the existing surrounding lawn in the photo, same species same color same texture, seamlessly blended, smooth natural slope from existing grass edge down to waterline, no bare soil, photorealistic, continuous lawn identical to adjacent grass';
+});
 
 function printReport(){
   if(!state.lastEstimate){toast('Run a calculation first.');return;}
