@@ -135,7 +135,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.0.8</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.0.9</div>
   </div>
 </header>
 
@@ -291,7 +291,7 @@
 
 <script>
 const API_BASE = '/api/replicate';
-const MODEL_VERSION = 'stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3';
+const MODEL_VERSION = 'black-forest-labs/flux-fill-pro';
 
 const state={img:null,imgW:0,imgH:0,canvasW:0,canvasH:0,offsetX:0,offsetY:0,scale:1,scaleLine:null,scalePhase:0,drawPoints:[],mode:'idle',pxPerUnit:null,lastEstimate:null,originalDataURL:null};
 
@@ -503,7 +503,7 @@ async function runAISimulation(){
   document.getElementById('aiBtn').disabled=true;
   const veg=document.getElementById('vegSelect').value;
   const slope=document.getElementById('slopeSelect').value;
-  const prompt=`same photograph, same camera angle, same sky, same background, same lighting, restored shoreline bank with ${veg} on a ${slope} graded slope, Shore Sox erosion control tan tube at waterline, healthy green grass replacing bare soil, photorealistic`;
+  const prompt=`lush green ${veg} covering the bare eroded soil on the lake bank, smooth graded slope down to the water, healthy thick grass growing all the way to the waterline, natural looking, photorealistic, seamless`;
   const negPrompt='different scene, different angle, different background, different sky, cartoon, painting, illustration, render, blurry, watermark, text';
   try {
     const maskDataURL=buildMaskDataURL();
@@ -513,14 +513,14 @@ async function runAISimulation(){
     const maskUrl=await uploadToReplicate(maskDataURL);
     showSpinner(true,'Generating simulation...');
     const body={
-      version:MODEL_VERSION,
+      model:MODEL_VERSION,
       input:{
-        prompt,negative_prompt:negPrompt,
+        prompt,
         image:imageUrl,
         mask:maskUrl,
-        num_inference_steps:25,
-        guidance_scale:8,
-        strength:0.35,
+        steps:50,
+        guidance:30,
+        output_format:'jpg',
       }
     };
     const res=await fetch(API_BASE,{
