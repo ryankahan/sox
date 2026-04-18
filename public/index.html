@@ -135,7 +135,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.0.7</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.0.8</div>
   </div>
 </header>
 
@@ -471,13 +471,13 @@ function buildMaskDataURL(){
   for(let i=1;i<imgPts.length;i++)mctx.lineTo(imgPts[i].x,imgPts[i].y);
   mctx.stroke();
   // Fill the bank area below the line
-  mctx.fillStyle='white';
+  // Only mask a narrow band along the bank line, not the whole area
+  mctx.strokeStyle='white';
+  mctx.lineWidth=Math.max(40,mh*0.08);
   mctx.beginPath();
   mctx.moveTo(imgPts[0].x,imgPts[0].y);
   for(let i=1;i<imgPts.length;i++)mctx.lineTo(imgPts[i].x,imgPts[i].y);
-  mctx.lineTo(imgPts[imgPts.length-1].x,mh);
-  mctx.lineTo(imgPts[0].x,mh);
-  mctx.closePath();mctx.fill();
+  mctx.stroke();
   return mc.toDataURL('image/png');
 }
 
@@ -520,7 +520,7 @@ async function runAISimulation(){
         mask:maskUrl,
         num_inference_steps:25,
         guidance_scale:8,
-        strength:0.55,
+        strength:0.35,
       }
     };
     const res=await fetch(API_BASE,{
