@@ -135,7 +135,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.1.0</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.2.0</div>
   </div>
 </header>
 
@@ -149,7 +149,7 @@
         <div class="step-arrow">›</div>
         <div class="step" id="step2"><div class="step-num">2</div><span>Scale</span></div>
         <div class="step-arrow">›</div>
-        <div class="step" id="step3"><div class="step-num">3</div><span>Draw</span></div>
+        <div class="step" id="step3"><div class="step-num">3</div><span>Trace</span></div>
         <div class="step-arrow">›</div>
         <div class="step" id="step4"><div class="step-num">4</div><span>Simulate</span></div>
       </div>
@@ -187,13 +187,19 @@
     </div>
 
     <div class="card">
-      <div class="section-label">3. Trace the Bank Line</div>
-      <div class="info-box">Click along the eroded shoreline edge. Double-click to finish.</div>
+      <div class="section-label">3. Trace Two Lines</div>
+      <div class="info-box">First trace the good grass edge at the top of the eroded area. Then trace the waterline at the bottom. The AI fills between them.</div>
+      <div style="font-size:0.72rem;color:var(--green-bright);margin-bottom:4px;">STEP 3A — Grass Edge (top)</div>
       <div class="tool-row">
-        <button class="tool-btn" id="drawBtn" onclick="setMode('draw')">✏️ Trace Bank</button>
-        <button class="tool-btn" onclick="undoPoint()">↩ Undo</button>
+        <button class="tool-btn" id="drawBtn" onclick="setMode('draw')">🌿 Trace Grass Edge</button>
+        <button class="tool-btn" onclick="undoPoint('draw')">↩ Undo</button>
       </div>
-      <button class="btn-secondary" onclick="clearDraw()">Clear Trace</button>
+      <div style="font-size:0.72rem;color:#42a5f5;margin:8px 0 4px;">STEP 3B — Waterline (bottom)</div>
+      <div class="tool-row">
+        <button class="tool-btn" id="waterBtn" onclick="setMode('water')">💧 Trace Waterline</button>
+        <button class="tool-btn" onclick="undoPoint('water')">↩ Undo</button>
+      </div>
+      <button class="btn-secondary" onclick="clearDraw()">Clear All Traces</button>
     </div>
 
     <div class="card">
@@ -293,7 +299,7 @@
 const API_BASE = '/api/replicate';
 const MODEL_VERSION = 'black-forest-labs/flux-fill-pro';
 
-const state={img:null,imgW:0,imgH:0,canvasW:0,canvasH:0,offsetX:0,offsetY:0,scale:1,scaleLine:null,scalePhase:0,drawPoints:[],mode:'idle',pxPerUnit:null,lastEstimate:null,originalDataURL:null};
+const state={img:null,imgW:0,imgH:0,canvasW:0,canvasH:0,offsetX:0,offsetY:0,scale:1,scaleLine:null,scalePhase:0,drawPoints:[],waterPoints:[],mode:'idle',pxPerUnit:null,lastEstimate:null,originalDataURL:null};
 
 const canvas=document.getElementById('mainCanvas');
 const ctx=canvas.getContext('2d');
@@ -357,6 +363,7 @@ function setMode(m){
   state.mode=m;state.scalePhase=0;
   document.getElementById('scaleBtn').classList.toggle('active',m==='scale');
   document.getElementById('drawBtn').classList.toggle('active',m==='draw');
+  document.getElementById('waterBtn').classList.toggle('active',m==='water');
   document.getElementById('modeLabel').textContent='MODE: '+m.toUpperCase();
   canvas.style.cursor=(m==='idle')?'default':'crosshair';
 }
@@ -380,7 +387,14 @@ canvas.addEventListener('click',e=>{
   }
   if(state.mode==='draw'){
     state.drawPoints.push({x:cx,y:cy});render();
-    if(state.drawPoints.length>=2){document.getElementById('calcBtn').disabled=false;updateDot('dotTrace',true);setStep(4);}
+    if(state.drawPoints.length>=2){updateDot('dotTrace',true);}
+  }
+  if(state.mode==='water'){
+    state.waterPoints.push({x:cx,y:cy});render();
+    if(state.waterPoints.length>=2){
+      updateDot('dotTrace',true);
+      if(state.drawPoints.length>=2){document.getElementById('calcBtn').disabled=false;setStep(4);}
+    }
   }
 });
 
@@ -402,8 +416,11 @@ function computeScale(){
   toast('Scale set. Now trace the bank line.');
 }
 function clearScale(){state.scaleLine=null;state.pxPerUnit=null;document.getElementById('scaleStatus').textContent='';updateDot('dotScale',false);render();}
-function clearDraw(){state.drawPoints=[];document.getElementById('calcBtn').disabled=true;document.getElementById('aiBtn').disabled=true;updateDot('dotTrace',false);updateDot('dotCalc',false);updateDot('dotSim',false);resetResults();hideAIResult();render();}
-function undoPoint(){if(state.drawPoints.length>0){state.drawPoints.pop();render();}}
+function clearDraw(){state.drawPoints=[];state.waterPoints=[];document.getElementById('calcBtn').disabled=true;document.getElementById('aiBtn').disabled=true;updateDot('dotTrace',false);updateDot('dotCalc',false);updateDot('dotSim',false);resetResults();hideAIResult();render();}
+function undoPoint(type){
+  if(type==='water'){if(state.waterPoints.length>0){state.waterPoints.pop();render();}}
+  else{if(state.drawPoints.length>0){state.drawPoints.pop();render();}}
+}
 
 function calculate(){
   if(state.drawPoints.length<2){toast('Trace at least 2 points.');return;}
@@ -460,24 +477,18 @@ function buildMaskDataURL(){
   mc.width=mw;mc.height=mh;
   const mctx=mc.getContext('2d');
   mctx.fillStyle='black';mctx.fillRect(0,0,mw,mh);
-  if(state.drawPoints.length<2)return mc.toDataURL('image/png');
   const scaleX=mw/state.imgW, scaleY=mh/state.imgH;
-  const imgPts=state.drawPoints.map(p=>{const ip=canvasToImg(p.x,p.y);return{x:ip.x*scaleX,y:ip.y*scaleY};});
-  mctx.strokeStyle='white';
-  mctx.lineWidth=Math.max(80,mh*0.18);
-  mctx.lineCap='round';mctx.lineJoin='round';
+  const grassPts=state.drawPoints.map(p=>{const ip=canvasToImg(p.x,p.y);return{x:ip.x*scaleX,y:ip.y*scaleY};});
+  const waterPts=state.waterPoints.map(p=>{const ip=canvasToImg(p.x,p.y);return{x:ip.x*scaleX,y:ip.y*scaleY};});
+  if(grassPts.length<2||waterPts.length<2) return mc.toDataURL('image/png');
+  // Fill polygon: grass edge forward, water edge reverse
+  mctx.fillStyle='white';
   mctx.beginPath();
-  mctx.moveTo(imgPts[0].x,imgPts[0].y);
-  for(let i=1;i<imgPts.length;i++)mctx.lineTo(imgPts[i].x,imgPts[i].y);
-  mctx.stroke();
-  // Fill the bank area below the line
-  // Only mask a narrow band along the bank line, not the whole area
-  mctx.strokeStyle='white';
-  mctx.lineWidth=Math.max(40,mh*0.08);
-  mctx.beginPath();
-  mctx.moveTo(imgPts[0].x,imgPts[0].y);
-  for(let i=1;i<imgPts.length;i++)mctx.lineTo(imgPts[i].x,imgPts[i].y);
-  mctx.stroke();
+  mctx.moveTo(grassPts[0].x,grassPts[0].y);
+  for(let i=1;i<grassPts.length;i++) mctx.lineTo(grassPts[i].x,grassPts[i].y);
+  for(let i=waterPts.length-1;i>=0;i--) mctx.lineTo(waterPts[i].x,waterPts[i].y);
+  mctx.closePath();
+  mctx.fill();
   return mc.toDataURL('image/png');
 }
 
