@@ -135,7 +135,7 @@
   <div class="header-right">
     <span class="powered-by">AI SIMULATION · REPLICATE</span>
     <div class="header-badge">Pro Estimator</div>
-    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.0.5</div>
+    <div style="font-size:0.6rem;color:#76c442;letter-spacing:1px;font-weight:700;">v1.0.7</div>
   </div>
 </header>
 
@@ -503,8 +503,8 @@ async function runAISimulation(){
   document.getElementById('aiBtn').disabled=true;
   const veg=document.getElementById('vegSelect').value;
   const slope=document.getElementById('slopeSelect').value;
-  const prompt=`Professional landscape photo of a beautifully restored lake shoreline. ${veg} growing right to the water's edge on a smooth graded ${slope} slope. A Shore Sox erosion control tube visible at the waterline — a tan cylindrical fabric sock filled with soil stabilizing the bank. Crystal clear lake water. Lush healthy vegetation. Sunny day. Photorealistic, high resolution, 4k.`;
-  const negPrompt='erosion, bare soil, dirt exposed, muddy bank, degraded, brown earth, debris, ugly, blurry, cartoon, painting, illustration, render, cgi';
+  const prompt=`same photograph, same camera angle, same sky, same background, same lighting, restored shoreline bank with ${veg} on a ${slope} graded slope, Shore Sox erosion control tan tube at waterline, healthy green grass replacing bare soil, photorealistic`;
+  const negPrompt='different scene, different angle, different background, different sky, cartoon, painting, illustration, render, blurry, watermark, text';
   try {
     const maskDataURL=buildMaskDataURL();
     showSpinner(true,'Uploading photo to AI...');
@@ -518,9 +518,9 @@ async function runAISimulation(){
         prompt,negative_prompt:negPrompt,
         image:imageUrl,
         mask:maskUrl,
-        num_inference_steps:30,
+        num_inference_steps:25,
         guidance_scale:8,
-        strength:0.9,
+        strength:0.55,
       }
     };
     const res=await fetch(API_BASE,{
