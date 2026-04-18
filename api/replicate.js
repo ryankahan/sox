@@ -30,10 +30,14 @@ const handler = async function(req, res) {
     return res.status(response.status).json(data);
   }
   if (req.method === 'POST') {
-    const response = await fetch('https://api.replicate.com/v1/predictions', {
+    const { model, version, input } = req.body;
+    const endpoint = model
+      ? `https://api.replicate.com/v1/models/${model}/predictions`
+      : 'https://api.replicate.com/v1/predictions';
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Authorization': `Token ${REPLICATE_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body),
+      headers: { 'Authorization': `Token ${REPLICATE_TOKEN}`, 'Content-Type': 'application/json', 'Prefer': 'wait' },
+      body: JSON.stringify(model ? { input } : { version, input }),
     });
     const data = await response.json();
     return res.status(response.status).json(data);
